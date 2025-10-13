@@ -199,6 +199,17 @@ module Complete_by_prefix = struct
         doc
         (dispatch_cmd ~prefix logical_pos)
     in
+    let () =
+      Printf.eprintf "DEBUG Complete_by_prefix.complete:\n";
+      Printf.eprintf "  context: ";
+      (match completion.context with
+       | `Unknown -> Printf.eprintf "Unknown\n"
+       | `Application { Query_protocol.Compl.labels; argument_type } ->
+         Printf.eprintf "Application { argument_type=%s, labels=[%s] }\n"
+           argument_type
+           (String.concat ~sep:", " (List.map ~f:fst labels)));
+      Printf.eprintf "  entries count: %d\n%!" (List.length completion.entries)
+    in
     let keyword_completionItems =
       (* we complete only keyword 'in' for now *)
       match Document.Merlin.kind doc with
@@ -308,6 +319,19 @@ let complete
            let prefix =
              prefix_of_position ~short_path:false (Document.source doc) position
            in
+           let () =
+             let source_text = Msource.text (Document.source doc) in
+             let (`Offset offset) = Msource.get_offset (Document.source doc) position in
+             let char_before_cursor =
+               if offset > 0 && offset <= String.length source_text
+               then String.get source_text (offset - 1)
+               else ' '
+             in
+             Printf.eprintf "DEBUG: prefix='%s'\n" prefix;
+             Printf.eprintf "  char_before_cursor='%c' (offset=%d)\n" char_before_cursor offset;
+             Printf.eprintf "  can_be_hole=%b\n%!"
+               (Merlin_analysis.Typed_hole.can_be_hole prefix)
+           in
            let deprecated =
              Option.value
                ~default:false
@@ -316,7 +340,46 @@ let complete
                 item.deprecatedSupport)
            in
            if not (Merlin_analysis.Typed_hole.can_be_hole prefix)
-           then Complete_by_prefix.complete merlin prefix pos ~resolve ~deprecated
+           then (
+             let* compl_by_prefix_items =
+               Complete_by_prefix.complete merlin prefix pos ~resolve ~deprecated
+             in
+             (* Also try to get construct completions by checking the completion context *)
+             let+ construct_items =
+               let logical_pos = Position.logical pos in
+               let* compl_resp =
+                 Document.Merlin.with_pipeline_exn
+                   ~name:"completion-check-context"
+                   merlin
+                   (Complete_by_prefix.dispatch_cmd ~prefix logical_pos)
+               in
+               (* Check if we have an Application context with a concrete type *)
+               let should_construct =
+                 match compl_resp.context with
+                 | `Application { Query_protocol.Compl.labels = _; argument_type } ->
+                   (* Only construct if it's not a polymorphic type variable *)
+                   not (String.is_prefix ~prefix:"'" argument_type)
+                 | `Unknown -> false
+               in
+               if should_construct
+               then (
+                 let+ construct_cmd_resp =
+                   Document.Merlin.with_pipeline_exn
+                     ~name:"completion-construct-app"
+                     merlin
+                     (fun pipeline ->
+                       Complete_with_construct.dispatch_cmd logical_pos pipeline)
+                 in
+                 let supportsJumpToNextHole =
+                   State.experimental_client_capabilities state
+                   |> Client.Experimental_capabilities.supportsJumpToNextHole
+                 in
+                 Complete_with_construct.process_dispatch_resp
+                   ~supportsJumpToNextHole
+                   construct_cmd_resp)
+               else Fiber.return []
+             in
+             construct_items @ compl_by_prefix_items)
            else (
              let reindex_sortText completion_items =
                List.mapi completion_items ~f:(fun idx (ci : CompletionItem.t) ->
@@ -348,6 +411,17 @@ let complete
                       Complete_by_prefix.dispatch_cmd ~prefix position pipeline
                     in
                     construct_cmd_resp, compl_by_prefix_resp)
+             in
+             let () =
+               match compl_by_prefix_resp.context with
+               | `Application { Query_protocol.Compl.labels; argument_type } ->
+                 Printf.eprintf "DEBUG: Application context found!\n";
+                 Printf.eprintf "  argument_type: %s\n" argument_type;
+                 Printf.eprintf "  labels: %s\n"
+                   (String.concat ~sep:", " (List.map ~f:fst labels));
+                 Printf.eprintf "  entries count: %d\n%!"
+                   (List.length compl_by_prefix_resp.entries)
+               | `Unknown -> Printf.eprintf "DEBUG: Unknown context\n%!"
              in
              let construct_completionItems =
                let supportsJumpToNextHole =

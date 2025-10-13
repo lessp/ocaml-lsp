@@ -53,6 +53,12 @@ let foo_value = foo ?a
   Helpers.test source req;
   [%expect
     {|
+    DEBUG: prefix='~a'
+      char_before_cursor='a' (offset=54)
+      can_be_hole=false
+    DEBUG Complete_by_prefix.complete:
+      context: Application { argument_type='d, labels=[?aaa, ?aab, ~abb] }
+      entries count: 0
     {
       "detail": "'a",
       "kind": 5,
@@ -93,6 +99,12 @@ let foo_value = foo ?a
       }
     }
     ****************************************
+    DEBUG: prefix='?a'
+      char_before_cursor='a' (offset=77)
+      can_be_hole=false
+    DEBUG Complete_by_prefix.complete:
+      context: Application { argument_type='d option, labels=[?aaa, ?aab, ~abb] }
+      entries count: 0
     {
       "detail": "'a",
       "kind": 5,

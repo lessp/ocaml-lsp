@@ -7,13 +7,13 @@
 (library
  (name ocaml_lsp_e2e)
  (inline_tests
-  (enabled_if
-   (= %{os_type} Unix))
-  (deps
-   %{bin:ocamlformat-rpc}
-   for_ppx.ml
-   for_pp.ml
-   (package ocaml-lsp-server)))
+ (enabled_if
+  (= %{os_type} Unix))
+ (deps
+  ; %{bin:ocamlformat-rpc}
+  for_ppx.ml
+  for_pp.ml
+  (package ocaml-lsp-server)))
  (libraries
   unix
   stdune
@@ -69,6 +69,7 @@
     document_symbol
     merlin_jump
     type_search
+    variant_completion
     with_pp
     with_ppx
     workspace_change_config))))

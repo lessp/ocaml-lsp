@@ -1041,7 +1041,7 @@ let f (x : t) = x
           {
             "edits": [
               {
-                "newText": "type t = Foo of int | Bar of bool\n\nval f : t -> t\n",
+                "newText": "type t = Foo of int | Bar of bool\nval f : t -> t\n",
                 "range": {
                   "end": { "character": 0, "line": 0 },
                   "start": { "character": 0, "line": 0 }
@@ -1055,7 +1055,8 @@ let f (x : t) = x
       "isPreferred": false,
       "kind": "inferred_intf",
       "title": "Insert inferred interface"
-    } |}]
+    }
+    |}]
 ;;
 
 let%expect_test "inferred interface excludes existing names" =

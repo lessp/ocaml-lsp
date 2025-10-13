@@ -36,7 +36,42 @@ let%expect_test
   test run;
   [%expect
     {|
-    ocamllsp finished with code = 0  |}]
+    (* CR expect_test_collector: This test expectation appears to contain a backtrace.
+       This is strongly discouraged as backtraces are fragile.
+       Please change this test to not include a backtrace. *)
+
+    dropped notification
+    Uncaught error when handling notification:
+    {
+      "params": {
+        "message": "Unable to find 'ocamlformat-rpc' binary. Types on hover may not be well-formatted. You need to install either 'ocamlformat' of version > 0.21.0 or, otherwise, 'ocamlformat-rpc' package.",
+        "type": 3
+      },
+      "method": "window/showMessage",
+      "jsonrpc": "2.0"
+    }
+    Error:
+    [ { exn =
+          "(\"unexpected notification\",\n\
+          \ { notification =\n\
+          \     { params =\n\
+          \         { message =\n\
+          \             \"Unable to find 'ocamlformat-rpc' binary. Types on hover may not be well-formatted. You need to install either 'ocamlformat' of version > 0.21.0 or, otherwise, 'ocamlformat-rpc' package.\"\n\
+          \         ; type = 3\n\
+          \         }\n\
+          \     ; method = \"window/showMessage\"\n\
+          \     ; jsonrpc = \"2.0\"\n\
+          \     }\n\
+          \ })"
+      ; backtrace =
+          "Raised at Stdune__Code_error.raise in file \"otherlibs/stdune/src/code_error.ml\", line 10, characters 30-62\n\
+           Called from Lsp_fiber__Rpc.Client.h_on_notification in file \"lsp-fiber/src/rpc.ml\", line 362, characters 17-46\n\
+           Called from Fiber__Scheduler.exec in file \"fiber/src/scheduler.ml\", line 73, characters 8-11\n\
+           "
+      }
+    ]
+    ocamllsp finished with code = 0
+    |}]
 ;;
 
 let%expect_test "ocamllsp does not exit if only Shutdown notification is sent" =
@@ -47,7 +82,42 @@ let%expect_test "ocamllsp does not exit if only Shutdown notification is sent" =
   test run;
   [%expect
     {|
-    ocamllsp killed with signal = -7  |}]
+    (* CR expect_test_collector: This test expectation appears to contain a backtrace.
+       This is strongly discouraged as backtraces are fragile.
+       Please change this test to not include a backtrace. *)
+
+    dropped notification
+    Uncaught error when handling notification:
+    {
+      "params": {
+        "message": "Unable to find 'ocamlformat-rpc' binary. Types on hover may not be well-formatted. You need to install either 'ocamlformat' of version > 0.21.0 or, otherwise, 'ocamlformat-rpc' package.",
+        "type": 3
+      },
+      "method": "window/showMessage",
+      "jsonrpc": "2.0"
+    }
+    Error:
+    [ { exn =
+          "(\"unexpected notification\",\n\
+          \ { notification =\n\
+          \     { params =\n\
+          \         { message =\n\
+          \             \"Unable to find 'ocamlformat-rpc' binary. Types on hover may not be well-formatted. You need to install either 'ocamlformat' of version > 0.21.0 or, otherwise, 'ocamlformat-rpc' package.\"\n\
+          \         ; type = 3\n\
+          \         }\n\
+          \     ; method = \"window/showMessage\"\n\
+          \     ; jsonrpc = \"2.0\"\n\
+          \     }\n\
+          \ })"
+      ; backtrace =
+          "Raised at Stdune__Code_error.raise in file \"otherlibs/stdune/src/code_error.ml\", line 10, characters 30-62\n\
+           Called from Lsp_fiber__Rpc.Client.h_on_notification in file \"lsp-fiber/src/rpc.ml\", line 362, characters 17-46\n\
+           Called from Fiber__Scheduler.exec in file \"fiber/src/scheduler.ml\", line 73, characters 8-11\n\
+           "
+      }
+    ]
+    ocamllsp killed with signal = -7
+    |}]
 ;;
 
 let%expect_test
@@ -60,5 +130,40 @@ let%expect_test
   test run;
   [%expect
     {|
-    ocamllsp finished with code = 0  |}]
+    (* CR expect_test_collector: This test expectation appears to contain a backtrace.
+       This is strongly discouraged as backtraces are fragile.
+       Please change this test to not include a backtrace. *)
+
+    dropped notification
+    Uncaught error when handling notification:
+    {
+      "params": {
+        "message": "Unable to find 'ocamlformat-rpc' binary. Types on hover may not be well-formatted. You need to install either 'ocamlformat' of version > 0.21.0 or, otherwise, 'ocamlformat-rpc' package.",
+        "type": 3
+      },
+      "method": "window/showMessage",
+      "jsonrpc": "2.0"
+    }
+    Error:
+    [ { exn =
+          "(\"unexpected notification\",\n\
+          \ { notification =\n\
+          \     { params =\n\
+          \         { message =\n\
+          \             \"Unable to find 'ocamlformat-rpc' binary. Types on hover may not be well-formatted. You need to install either 'ocamlformat' of version > 0.21.0 or, otherwise, 'ocamlformat-rpc' package.\"\n\
+          \         ; type = 3\n\
+          \         }\n\
+          \     ; method = \"window/showMessage\"\n\
+          \     ; jsonrpc = \"2.0\"\n\
+          \     }\n\
+          \ })"
+      ; backtrace =
+          "Raised at Stdune__Code_error.raise in file \"otherlibs/stdune/src/code_error.ml\", line 10, characters 30-62\n\
+           Called from Lsp_fiber__Rpc.Client.h_on_notification in file \"lsp-fiber/src/rpc.ml\", line 362, characters 17-46\n\
+           Called from Fiber__Scheduler.exec in file \"fiber/src/scheduler.ml\", line 73, characters 8-11\n\
+           "
+      }
+    ]
+    ocamllsp finished with code = 0
+    |}]
 ;;

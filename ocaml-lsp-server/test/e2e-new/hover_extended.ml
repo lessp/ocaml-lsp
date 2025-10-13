@@ -93,13 +93,14 @@ let f a b c d e f g h i = 1 + a + b + c + d + e + f + g + h + i
     {
       "contents": {
         "kind": "plaintext",
-        "value": "int ->\nint ->\nint ->\nint ->\nint ->\nint ->\nint ->\nint ->\nint ->\nint"
+        "value": "int -> int -> int -> int -> int -> int -> int -> int -> int -> int"
       },
       "range": {
         "end": { "character": 5, "line": 1 },
         "start": { "character": 4, "line": 1 }
       }
-    } |}]
+    }
+    |}]
 ;;
 
 let%expect_test "hover extended" =
@@ -303,11 +304,12 @@ let f a b c d e f g h i = 1 + a + b + c + d + e + f + g + h + i
     {
       "contents": {
         "kind": "plaintext",
-        "value": "int ->\nint ->\nint ->\nint ->\nint ->\nint ->\nint ->\nint ->\nint ->\nint"
+        "value": "int -> int -> int -> int -> int -> int -> int -> int -> int -> int"
       },
       "range": {
         "end": { "character": 5, "line": 1 },
         "start": { "character": 4, "line": 1 }
       }
-    } |}]
+    }
+    |}]
 ;;
