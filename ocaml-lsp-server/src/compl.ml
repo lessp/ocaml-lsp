@@ -379,7 +379,17 @@ let complete
                    construct_cmd_resp)
                else Fiber.return []
              in
-             construct_items @ compl_by_prefix_items)
+             (* If we have construct items (variant constructors), filter out generic
+                operators from prefix completions to reduce noise *)
+             let filtered_prefix_items =
+               if List.is_empty construct_items
+               then compl_by_prefix_items
+               else
+                 List.filter compl_by_prefix_items ~f:(fun (item : CompletionItem.t) ->
+                   (* Filter out generic operators like :: and := *)
+                   not (String.equal item.label "::" || String.equal item.label ":="))
+             in
+             construct_items @ filtered_prefix_items)
            else (
              let reindex_sortText completion_items =
                List.mapi completion_items ~f:(fun idx (ci : CompletionItem.t) ->
