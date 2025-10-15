@@ -191,6 +191,24 @@ module Complete_by_prefix = struct
     | _ -> []
   ;;
 
+  let complete_old doc prefix pos ~deprecated ~resolve =
+    let+ (completion : Query_protocol.completions) =
+      let logical_pos = Position.logical pos in
+      Document.Merlin.with_pipeline_exn
+        ~name:"completion-prefix"
+        doc
+        (dispatch_cmd ~prefix logical_pos)
+    in
+    let keyword_completionItems =
+      (* we complete only keyword 'in' for now *)
+      match Document.Merlin.kind doc with
+      | Intf -> []
+      | Impl -> complete_keywords pos prefix
+    in
+    keyword_completionItems
+    @ process_dispatch_resp ~deprecated ~resolve ~prefix doc pos completion
+  ;;
+
   let complete doc prefix pos ~deprecated ~resolve =
     let+ (completion : Query_protocol.completions) =
       let logical_pos = Position.logical pos in
@@ -224,10 +242,13 @@ module Complete_with_construct = struct
     | Error exn -> Exn_with_backtrace.reraise exn
   ;;
 
-  let process_dispatch_resp ~supportsJumpToNextHole = function
+  let process_dispatch_resp ~supportsJumpToNextHole ?override_range = function
     | None -> []
     | Some (loc, constructed_exprs) ->
-      let range = Range.of_loc loc in
+      let range = match override_range with
+        | Some r -> r
+        | None -> Range.of_loc loc
+      in
       let deparen_constr_expr expr =
         if
           (not (String.equal expr "()"))
@@ -343,30 +364,63 @@ let complete
                 item.deprecatedSupport)
            in
            if not (Merlin_analysis.Typed_hole.can_be_hole prefix)
+           (* then Complete_by_prefix.complete_old merlin prefix pos ~resolve ~deprecated *)
            then (
              let* (completions, context) =
                Complete_by_prefix.complete merlin prefix pos ~resolve ~deprecated
              in
              (* Check if we should generate construct completions *)
-             let+ construct_completionItems =
+             let* construct_completionItems =
                match context with
-               | `Application { Query_protocol.Compl.labels = _; argument_type }
-                 when not (is_polymorphic_type argument_type)
-                   && not (is_primitive_type argument_type) ->
-                 let+ construct_response =
+               | `Application { Query_protocol.Compl.labels = _; argument_type } when not (is_polymorphic_type argument_type) ->
+                 (* Try construct command first *)
+                 let* construct_response_initial =
                    Document.Merlin.with_pipeline_exn
                      ~name:"completion-construct"
                      merlin
                      (fun pipeline ->
                        Complete_with_construct.dispatch_cmd position pipeline)
                  in
-                 Complete_with_construct.process_dispatch_resp
-                   ~supportsJumpToNextHole:(
-                     state
-                     |> State.experimental_client_capabilities
-                     |> Client.Experimental_capabilities.supportsJumpToNextHole
-                   )
-                   construct_response
+                 let* construct_response =
+                   match construct_response_initial with
+                   | Some _ -> Fiber.return construct_response_initial
+                   | None ->
+                     (* Failed - likely because cursor is at : or = without explicit _
+                        Try inserting _ temporarily to create a proper typed hole *)
+                     if String.is_suffix prefix ~suffix:":" || String.is_suffix prefix ~suffix:"=" then (
+                       let doc_with_underscore =
+                         let text_edit = TextDocumentContentChangeEvent.create
+                           ~range:(Range.create ~start:pos ~end_:pos) ~text:"_" () in
+                         Document.update_text (Document.Merlin.to_doc merlin) [ text_edit ]
+                       in
+                       match Document.kind doc_with_underscore with
+                       | `Merlin merlin_with_underscore ->
+                         Document.Merlin.with_pipeline_exn
+                           ~name:"completion-construct-with-underscore"
+                           merlin_with_underscore
+                           (fun pipeline ->
+                             Complete_with_construct.dispatch_cmd position pipeline)
+                       | _ -> Fiber.return None
+                     ) else
+                       Fiber.return None
+                 in
+                 let override_range =
+                   (* If we used the underscore hack, use zero-width range at cursor
+                      to avoid replacing trailing text *)
+                   match construct_response_initial with
+                   | None -> Some (Range.create ~start:pos ~end_:pos)
+                   | Some _ -> None
+                 in
+                 Fiber.return (
+                   Complete_with_construct.process_dispatch_resp
+                     ~supportsJumpToNextHole:(
+                       state
+                       |> State.experimental_client_capabilities
+                       |> Client.Experimental_capabilities.supportsJumpToNextHole
+                     )
+                     ?override_range
+                     construct_response
+                 )
                | _ ->
                  Fiber.return []
              in
@@ -379,7 +433,7 @@ let complete
                | `Unknown ->
                  completions
              in
-             construct_completionItems @ prefix_completionItems)
+             Fiber.return (construct_completionItems @ prefix_completionItems))
            else (
              let reindex_sortText completion_items =
                List.mapi completion_items ~f:(fun idx (ci : CompletionItem.t) ->
